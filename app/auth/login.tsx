@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -8,189 +8,103 @@ import {
   Platform,
   ScrollView,
   SafeAreaView,
+  useColorScheme,
 } from 'react-native';
-import { Link, useFocusEffect, useRouter } from 'expo-router'; // ✅ only use useRouter here
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Link, useRouter } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
-
-// ✅ Smooth continuous typewriter effect
-type TypewriterTextProps = {
-  text: string;
-  speed?: number;
-  style?: any;
-};
-
-function TypewriterText({ text, speed = 100, style }: TypewriterTextProps) {
-  const [displayedText, setDisplayedText] = useState('');
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    const loop = () => {
-      let i = 0;
-      const interval = setInterval(() => {
-        setDisplayedText(text.slice(0, i));
-        i++;
-        if (i > text.length) {
-          i = 0;
-        }
-      }, speed);
-      return interval;
-    };
-
-    const interval = loop();
-    return () => clearInterval(interval);
-  }, [text, speed]);
-
-  return <Text style={style}>{displayedText}</Text>;
-}
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const router = useRouter(); // ✅ useRouter hook only
+  const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
+  const colorScheme = useColorScheme();
 
-  useFocusEffect(
-    useCallback(() => {
-      setEmail('');
-      setPassword('');
-    }, [])
-  );
-
-  // ✅ Dummy Login Logic
-  const handleLogin = async () => {
-    if (email === 'sampath' && password === 'sam2001') {
-      const user = { id: 'u123456', username: 'sampath' };
-      await AsyncStorage.setItem('userInfo', JSON.stringify(user));
-      router.replace('/(tabs)/homepage'); // ✅ use correct path with folder alias
+  const handleLogin = () => {
+    // Dummy login logic for demo
+    if ((email === 'sampath' || email === 'sampath@gmail.com') && password === 'sam2001') {
+      router.replace('/(tabs)/home');
     } else {
-      alert('Invalid credentials');
+      alert('Invalid credentials. Try sampath / sam2001');
     }
   };
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: '#FAFAFA' }}>
+    <SafeAreaView className="flex-1 bg-background dark:bg-dark-background">
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
-          keyboardShouldPersistTaps="handled"
-        >
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
           <View className="flex-1 justify-center items-center px-6 py-12">
             {/* Branding */}
-            <Text style={{ fontSize: 40, fontWeight: '800', color: '#D7263D', marginBottom: 4 }}>
-              Zytrix
-            </Text>
-
-            {/* Typewriter Slogan */}
-            <View style={{ height: 24, marginBottom: 20 }}>
-              <TypewriterText
-                text="Your fitness, your way"
-                speed={120}
-                style={{
-                  fontSize: 14,
-                  color: '#7A7A7A',
-                }}
-              />
-            </View>
+            <Text className="text-5xl font-extrabold text-primary dark:text-dark-primary mb-2 tracking-tight">Groxie</Text>
+            <Text className="text-base text-text-secondary dark:text-dark-text-secondary mb-8 font-medium">Scan. Eat. Repeat.</Text>
 
             {/* Login Form */}
-            <View style={{ width: '100%', padding: 24, borderRadius: 20 }}>
+            <View className="w-full p-6 rounded-2xl shadow-sm mb-6">
               <TextInput
                 placeholder="Email or username"
-                style={{
-                  borderBottomWidth: 1,
-                  borderColor: '#DADADA',
-                  marginBottom: 20,
-                  paddingVertical: 10,
-                  fontSize: 14,
-                  color: '#1A1A1A',
-                }}
-                placeholderTextColor="#7A7A7A"
+                className="border-b border-gray-200 dark:border-dark-input mb-6 py-3 text-base text-text-primary dark:text-dark-text-primary bg-transparent"
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
+                placeholderTextColor={colorScheme === 'dark' ? '#B0BEC5' : '#757575'}
               />
-              <TextInput
-                placeholder="Password"
-                style={{
-                  borderBottomWidth: 1,
-                  borderColor: '#DADADA',
-                  marginBottom: 8,
-                  paddingVertical: 10,
-                  fontSize: 14,
-                  color: '#1A1A1A',
-                }}
-                placeholderTextColor="#7A7A7A"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-              />
-
-              {/* 🔐 Forgot Password Link */}
-              <View style={{ alignItems: 'flex-end', marginBottom: 20 }}>
-                <TouchableOpacity onPress={() => { /* TODO: Link to forgot password screen */ }}>
-                  <Text style={{ fontSize: 13, color: '#D7263D', fontWeight: '500' }}>
-                    Forgot Password?
-                  </Text>
+              <View className="relative">
+                <TextInput
+                  placeholder="Password"
+                  className="border-b border-gray-200 dark:border-dark-input mb-2 py-3 text-base text-text-primary dark:text-dark-text-primary bg-transparent pr-10"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  placeholderTextColor={colorScheme === 'dark' ? '#B0BEC5' : '#757575'}
+                />
+                <TouchableOpacity
+                  className="absolute right-0 top-1/2 -translate-y-1/2 p-2"
+                  onPress={() => setShowPassword((prev) => !prev)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <FontAwesome
+                    name={showPassword ? 'eye-slash' : 'eye'}
+                    size={20}
+                    color={colorScheme === 'dark' ? '#B0BEC5' : '#757575'}
+                  />
                 </TouchableOpacity>
               </View>
-
+              <View className="items-end mb-6">
+                <TouchableOpacity>
+                  <Text className="text-xs text-secondary dark:text-dark-secondary font-semibold">Forgot Password?</Text>
+                </TouchableOpacity>
+              </View>
               <TouchableOpacity
-                style={{
-                  backgroundColor: '#D7263D',
-                  padding: 14,
-                  borderRadius: 14,
-                }}
-                onPress={handleLogin} // ✅ Added handler here
+                className="bg-button dark:bg-dark-button py-4 rounded-xl mb-2"
+                onPress={handleLogin}
               >
-                <Text
-                  style={{
-                    color: '#FFFFFF',
-                    textAlign: 'center',
-                    fontWeight: '700',
-                    fontSize: 16,
-                  }}
-                >
-                  Log In
-                </Text>
+                <Text className="text-white text-center font-bold text-lg">Log In</Text>
               </TouchableOpacity>
             </View>
 
             {/* Divider */}
-            <Text style={{ color: '#7A7A7A', marginVertical: 24 }}>or continue with</Text>
+            <View className="flex-row items-center w-full mb-6">
+              <View className="flex-1 h-px bg-gray-200 dark:bg-dark-input" />
+              <Text className="mx-4 text-text-secondary dark:text-dark-text-secondary font-medium">or</Text>
+              <View className="flex-1 h-px bg-gray-200 dark:bg-dark-input" />
+            </View>
 
             {/* Google Button */}
             <TouchableOpacity
-              style={{
-                backgroundColor: '#FFFFFF',
-                paddingVertical: 12,
-                paddingHorizontal: 24,
-                borderRadius: 50,
-                borderColor: '#DADADA',
-                borderWidth: 1,
-                marginBottom: 24,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 12,
-              }}
-              onPress={() => {
-                // TODO: Handle Google login
-              }}
+              className="flex-row items-center bg-card dark:bg-dark-card py-3 px-6 rounded-full border border-gray-200 dark:border-dark-input mb-8 shadow-sm"
+              onPress={() => {}}
             >
-              <FontAwesome name="google" size={20} color="#D7263D" />
-              <Text style={{ fontSize: 16, fontWeight: '600', color: '#2E2E2E' }}>
-                Sign in with Google
-              </Text>
+              <FontAwesome name="google" size={20} color="#FB8C00" />
+              <Text className="ml-3 text-base font-semibold text-text-primary dark:text-dark-text-primary">Sign in with Google</Text>
             </TouchableOpacity>
 
             {/* Footer */}
-            <Text style={{ fontSize: 14, color: '#1A1A1A' }}>
+            <Text className="text-base text-text-secondary dark:text-dark-text-secondary">
               Don’t have an account?{' '}
-              <Link href="/auth/signup" style={{ color: '#FF6F00', fontWeight: '600' }}>
-                Sign up
-              </Link>
+              <Link href="/auth/signup" className="text-secondary dark:text-dark-secondary font-bold">Sign up</Link>
             </Text>
           </View>
         </ScrollView>

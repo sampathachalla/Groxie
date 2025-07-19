@@ -11,27 +11,27 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // ✅ Light Mode Palette (Zytrix)
-        background: '#FAFAFA',
-        card: '#F2F2F2',
-        primary: '#D7263D',
-        secondary: '#2E2E2E',
-        accent: '#FF6F00',
-        textPrimary: '#1A1A1A',
-        textMuted: '#7A7A7A',
-        success: '#32CD32',
-        error: '#C62828',
+        // Groxie Optimized Light Theme
+        'primary': '#43A047', // Vital Green
+        'secondary': '#FB8C00', // Citrus Orange
+        'accent': '#8E24AA', // Soft Plum
+        'background': '#FFFFFF', // Clean White (for navbars and app background)
+        'card': '#FFFFFF', // Clean White
+        'input': '#FFFFFF', // Clean White
+        'text-primary': '#1E1E1E', // Deep Charcoal
+        'text-secondary': '#757575', // Cool Gray
+        'button': '#AED581', // Active Lime
 
-        // ✅ Dark Mode Palette (flat-prefixed for class-based dark mode)
-        'dark-background': '#121212',
-        'dark-card': '#1E1E1E',
-        'dark-primary': '#D7263D',
-        'dark-secondary': '#E0E0E0',
-        'dark-accent': '#FF6F00',
-        'dark-textPrimary': '#EDEDED',
-        'dark-textMuted': '#9E9E9E',
-        'dark-success': '#00FF7F',
-        'dark-error': '#EF5350',
+        // Groxie Optimized Dark Theme (prefix: dark-)
+        'dark-primary': '#00C853', // Emerald Glow
+        'dark-secondary': '#FFAB40', // Amber Blaze
+        'dark-accent': '#7C4DFF', // Indigo Pulse
+        'dark-background': '#181818', // True dark for navbars and app background
+        'dark-card': '#1E1E1E', // Soft Slate
+        'dark-input': '#1E1E1E', // Soft Slate
+        'dark-text-primary': '#F5F5F5', // Mist White
+        'dark-text-secondary': '#B0BEC5', // Silver Mist
+        'dark-button': '#66BB6A', // Glowing Mint
       }
     }
   },

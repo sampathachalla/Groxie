@@ -1,34 +1,59 @@
 // context/ThemeContext.tsx
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Appearance } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from 'nativewind';
 
-type Theme = 'light' | 'dark';
-
-interface ThemeContextProps {
-  theme: Theme;
+interface ThemeContextType {
+  theme: 'light' | 'dark';
   toggleTheme: () => void;
 }
 
-const ThemeContext = createContext<ThemeContextProps>({
+const ThemeContext = createContext<ThemeContextType>({
   theme: 'light',
   toggleTheme: () => {},
 });
 
-export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [theme, setTheme] = useState<Theme>('light');
+export const ThemeProvider = ({ children }: { children: ReactNode }) => {
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const { setColorScheme } = useColorScheme();
 
   useEffect(() => {
-    const systemColor = Appearance.getColorScheme() || 'light';
-    setTheme(systemColor);
-    setColorScheme(systemColor);
-  }, []);
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem('theme');
+        console.log('Stored theme:', stored);
+        if (stored === 'light' || stored === 'dark') {
+          setTheme(stored);
+          setColorScheme(stored);
+        } else {
+          const sys = Appearance.getColorScheme();
+          console.log('System theme:', sys);
+          const systemTheme = sys === 'dark' ? 'dark' : 'light';
+          setTheme(systemTheme);
+          setColorScheme(systemTheme);
+        }
+      } catch (error) {
+        console.log('Error loading theme:', error);
+        const sys = Appearance.getColorScheme();
+        const systemTheme = sys === 'dark' ? 'dark' : 'light';
+        setTheme(systemTheme);
+        setColorScheme(systemTheme);
+      }
+    })();
+  }, [setColorScheme]);
 
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
+  const toggleTheme = async () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    console.log('Toggling theme from', theme, 'to', newTheme);
     setTheme(newTheme);
-    setColorScheme(newTheme);
+    setColorScheme(newTheme); // This is crucial for NativeWind
+    try {
+      await AsyncStorage.setItem('theme', newTheme);
+      console.log('Theme saved to storage:', newTheme);
+    } catch (error) {
+      console.log('Error saving theme:', error);
+    }
   };
 
   return (
@@ -38,4 +63,4 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-export const useThemeContext = () => useContext(ThemeContext);
+export const useTheme = () => useContext(ThemeContext);
