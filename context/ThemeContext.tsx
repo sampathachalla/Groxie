@@ -1,6 +1,6 @@
 // context/ThemeContext.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Appearance } from 'react-native';
+import { Appearance, View, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from 'nativewind';
 
@@ -16,45 +16,49 @@ const ThemeContext = createContext<ThemeContextType>({
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [isLoading, setIsLoading] = useState(true); // <-- Add loading state
   const { setColorScheme } = useColorScheme();
 
   useEffect(() => {
     (async () => {
       try {
         const stored = await AsyncStorage.getItem('theme');
-        console.log('Stored theme:', stored);
         if (stored === 'light' || stored === 'dark') {
           setTheme(stored);
           setColorScheme(stored);
         } else {
           const sys = Appearance.getColorScheme();
-          console.log('System theme:', sys);
           const systemTheme = sys === 'dark' ? 'dark' : 'light';
           setTheme(systemTheme);
           setColorScheme(systemTheme);
         }
       } catch (error) {
-        console.log('Error loading theme:', error);
         const sys = Appearance.getColorScheme();
         const systemTheme = sys === 'dark' ? 'dark' : 'light';
         setTheme(systemTheme);
         setColorScheme(systemTheme);
       }
+      setIsLoading(false); // <-- Set loading to false after theme is set
     })();
   }, [setColorScheme]);
 
   const toggleTheme = async () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
-    console.log('Toggling theme from', theme, 'to', newTheme);
     setTheme(newTheme);
     setColorScheme(newTheme); // This is crucial for NativeWind
     try {
       await AsyncStorage.setItem('theme', newTheme);
-      console.log('Theme saved to storage:', newTheme);
-    } catch (error) {
-      console.log('Error saving theme:', error);
-    }
+    } catch (error) {}
   };
+
+  if (isLoading) {
+    // Render a loading indicator while theme is being loaded
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>

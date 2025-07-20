@@ -3,7 +3,23 @@ import { useTheme } from '../../context/ThemeContext';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 
 export default function TabsLayout() {
-  const { theme } = useTheme();
+  // Add error handling for useTheme
+  let theme = 'light';
+  let themeError = false;
+  
+  try {
+    const themeContext = useTheme();
+    if (themeContext && typeof themeContext === 'object' && themeContext.theme) {
+      theme = themeContext.theme;
+    } else {
+      console.warn('useTheme returned invalid data in TabsLayout:', themeContext);
+      themeError = true;
+    }
+  } catch (error) {
+    console.error('Error using useTheme in TabsLayout:', error);
+    themeError = true;
+  }
+  
   const iconColor = theme === 'dark' ? '#B0BEC5' : '#757575';
   const activeIconColor = theme === 'dark' ? '#FFFFFF' : '#000000';
 
@@ -74,6 +90,32 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => (
             <FontAwesome 
               name="history" 
+              size={24} 
+              color={focused ? activeIconColor : iconColor} 
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ focused }) => (
+            <FontAwesome 
+              name="user-circle" 
+              size={24} 
+              color={focused ? activeIconColor : iconColor} 
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="scannerresult"
+        options={{
+          title: 'Scanner Result',
+          tabBarIcon: ({ focused }) => (
+            <FontAwesome 
+              name="barcode" 
               size={24} 
               color={focused ? activeIconColor : iconColor} 
             />
