@@ -16,7 +16,10 @@ function ThemedLayoutWrapper() {
   return (
     <SafeAreaProvider>
       <View className="flex-1 bg-background dark:bg-dark-background">
-        <Stack screenOptions={{ headerShown: false }} />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="auth" options={{ headerShown: false }} />
+        </Stack>
         <StatusBar
           style={theme === 'dark' ? 'light' : 'dark'}
           backgroundColor={theme === 'dark' ? '#181818' : '#FFFFFF'}

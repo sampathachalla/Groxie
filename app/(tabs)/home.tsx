@@ -10,16 +10,18 @@ export default function HomeScreen() {
   const { colorScheme } = useColorScheme();
 
   return (
-    <SafeAreaView className="flex-1 bg-background dark:bg-dark-background" edges={['top', 'left', 'right', 'bottom']}>
-      <TopNavbar />
-      <View className="flex-1 justify-center items-center px-6">
+    <SafeAreaView className="flex-1 bg-background dark:bg-dark-background" edges={['left', 'right', 'bottom']}>
+      <SafeAreaView edges={['top']} className="bg-background dark:bg-dark-background">
+        <TopNavbar />
+      </SafeAreaView>
+      <View className="flex-1 justify-center items-center px-6 pt-16">
         <Text className="text-4xl font-extrabold text-primary dark:text-dark-primary mb-4 tracking-tight text-center">
           Welcome to Groxie!
         </Text>
         <Text className="text-lg text-text-secondary dark:text-dark-text-secondary text-center mb-8">
           Start scanning your food and discover what you eat.
         </Text>
-        <Text className="text-base text-gray-400 text-center mb-4">
+        <Text className="text-base text-gray-400 text-center">
           (This is your home screen. Add your features here!)
         </Text>
         {/* Debug theme info */}
