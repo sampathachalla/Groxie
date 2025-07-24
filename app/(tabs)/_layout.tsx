@@ -29,7 +29,6 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarStyle: { display: 'none' }, // Hide default tab bar since we have custom BottomNavbar
       }}
-      initialRouteName="home"
     >
       <Tabs.Screen
         name="home"

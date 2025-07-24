@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Modal as RNModal } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Modal as RNModal, ActivityIndicator } from 'react-native';
 import BottomNavbar from '../../components/Navbar/BottomNavbar';
 import TopNavbar from '../../components/Navbar/TopNavbar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,78 +6,49 @@ import { useTheme } from '../../context/ThemeContext';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
+import { CameraView, Camera } from 'expo-camera';
+import { nutritionixAPI, ProductSearchResult } from '../../services/nutritionixApi';
 
 export default function SearchScreen() {
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [CameraComponent, setCameraComponent] = useState<any>(null);
   const [scanned, setScanned] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [scannedData, setScannedData] = useState<{data: string, type: string} | null>(null);
-  const [searchResults, setSearchResults] = useState([
-    {
-      id: 1,
-      name: 'Organic Bananas',
-      brand: 'Fresh Market',
-      calories: 89,
-      protein: '1.1g',
-      carbs: '23g',
-      fat: '0.3g',
-      image: '🍌'
-    },
-    {
-      id: 2,
-      name: 'Greek Yogurt',
-      brand: 'Chobani',
-      calories: 130,
-      protein: '15g',
-      carbs: '9g',
-      fat: '4g',
-      image: '🥛'
-    },
-    {
-      id: 3,
-      name: 'Whole Grain Bread',
-      brand: 'Nature\'s Own',
-      calories: 80,
-      protein: '3g',
-      carbs: '15g',
-      fat: '1g',
-      image: '🍞'
-    }
-  ]);
+  const [searchResults, setSearchResults] = useState<ProductSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [recentSearches, setRecentSearches] = useState(['Apple', 'Milk', 'Bread', 'Chicken']);
 
-  // Request camera permission and load Camera component on mount
+  // Request camera permission on mount
   useEffect(() => {
-    const loadCamera = async () => {
-      try {
-        const cameraModule = await import('expo-camera');
-        const { status } = await cameraModule.Camera.requestCameraPermissionsAsync();
-        if (status === 'granted') {
-          setCameraComponent(cameraModule.Camera);
-          setHasPermission(true);
-        } else {
-          setHasPermission(false);
-        }
-      } catch (err) {
-        console.error('Error loading camera module:', err);
-        setHasPermission(false);
-      }
-    };
-    loadCamera();
+    (async () => {
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      setHasPermission(status === 'granted');
+    })();
   }, []);
 
-  const handleSearch = () => {
-    // In a real app, this would call an API
-    console.log('Searching for:', searchQuery);
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    
+    setIsSearching(true);
+    try {
+      const results = await nutritionixAPI.searchFood(searchQuery);
+      setSearchResults(results);
+      
+      // Add to recent searches if not already there
+      if (!recentSearches.includes(searchQuery)) {
+        setRecentSearches(prev => [searchQuery, ...prev.slice(0, 3)]);
+      }
+    } catch (error) {
+      Alert.alert('Search Error', 'Failed to search for food items. Please try again.');
+      console.error('Search error:', error);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const handleScan = async () => {
-    if (!CameraComponent) {
-      Alert.alert('Scanner Unavailable', 'Camera is not available on this device or platform.');
-      return;
-    }
     if (hasPermission === null) {
       Alert.alert('Permission Required', 'Camera permission is required to scan barcodes.');
       return;
@@ -136,12 +107,12 @@ export default function SearchScreen() {
 
         {/* Scanner Camera View */}
         <View className="flex-1 relative">
-          {CameraComponent && hasPermission && CameraComponent.Constants && CameraComponent.Constants.Type && (
-            <CameraComponent
+          {hasPermission && (
+            <CameraView
               style={{ flex: 1 }}
-              type={CameraComponent.Constants.Type.back}
-              barCodeScannerSettings={{
-                barCodeTypes: [
+              facing="back"
+              barcodeScannerSettings={{
+                barcodeTypes: [
                   'upc_a',
                   'upc_e',
                   'ean13',
@@ -154,22 +125,12 @@ export default function SearchScreen() {
                   'pdf417',
                 ],
               }}
-              onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+              onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
             />
           )}
 
-          {/* Show message if camera is not available */}
-          {!CameraComponent && (
-            <View className="flex-1 items-center justify-center bg-gray-800">
-              <FontAwesome name="exclamation-triangle" size={48} color="#F59E0B" />
-              <Text className="text-white text-center mt-4 text-lg px-4">
-                Camera is not available on this platform
-              </Text>
-            </View>
-          )}
-
           {/* Show message if no permission */}
-          {CameraComponent && !hasPermission && (
+          {!hasPermission && (
             <View className="flex-1 items-center justify-center bg-gray-800">
               <FontAwesome name="camera" size={48} color="#9CA3AF" />
               <Text className="text-white text-center mt-4 text-lg px-4">
@@ -304,7 +265,7 @@ export default function SearchScreen() {
               Recent Searches
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {['Apple', 'Milk', 'Bread', 'Chicken'].map((item, index) => (
+              {recentSearches.map((item, index) => (
                 <TouchableOpacity
                   key={index}
                   onPress={() => setSearchQuery(item)}
@@ -320,46 +281,74 @@ export default function SearchScreen() {
 
           {/* Search results */}
           <View className="flex-1">
-            <Text className="text-lg font-semibold text-primary dark:text-dark-primary mb-3">
-              Search Results
-            </Text>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {searchResults.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  className="bg-card dark:bg-dark-card p-4 rounded-lg mb-3 border border-gray-200 dark:border-gray-600"
-                >
-                  <View className="flex-row items-center">
-                    <Text className="text-3xl mr-4">{item.image}</Text>
-                    <View className="flex-1">
-                      <Text className="text-lg font-semibold text-text-primary dark:text-dark-text-primary">
-                        {item.name}
-                      </Text>
-                      <Text className="text-text-secondary dark:text-dark-text-secondary mb-2">
-                        {item.brand}
-                      </Text>
-                      <View className="flex-row">
-                        <Text className="text-sm text-text-secondary dark:text-dark-text-secondary mr-4">
-                          {item.calories} cal
-                        </Text>
-                        <Text className="text-sm text-text-secondary dark:text-dark-text-secondary mr-4">
-                          P: {item.protein}
-                        </Text>
-                        <Text className="text-sm text-text-secondary dark:text-dark-text-secondary mr-4">
-                          C: {item.carbs}
-                        </Text>
-                        <Text className="text-sm text-text-secondary dark:text-dark-text-secondary">
-                          F: {item.fat}
-                        </Text>
+            <View className="flex-row items-center justify-between mb-3">
+              <Text className="text-lg font-semibold text-primary dark:text-dark-primary">
+                Search Results
+              </Text>
+              {isSearching && (
+                <ActivityIndicator size="small" color={theme === 'dark' ? '#00C853' : '#43A047'} />
+              )}
+            </View>
+            
+            {isSearching ? (
+              <View className="flex-1 items-center justify-center">
+                <ActivityIndicator size="large" color={theme === 'dark' ? '#00C853' : '#43A047'} />
+                <Text className="text-text-secondary dark:text-dark-text-secondary mt-4">
+                  Searching for food items...
+                </Text>
+              </View>
+            ) : searchResults.length > 0 ? (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {searchResults.map((item, index) => (
+                  <TouchableOpacity
+                    key={`${item.food_name}-${index}`}
+                    className="bg-card dark:bg-dark-card p-4 rounded-lg mb-3 border border-gray-200 dark:border-gray-600"
+                    onPress={() => {
+                      // Navigate to detailed nutrition view
+                      router.push(`/(tabs)/scannerresult?foodName=${encodeURIComponent(item.food_name)}&brand=${encodeURIComponent(item.brand_name || '')}&nixItemId=${encodeURIComponent(item.nix_item_id || '')}` as any);
+                    }}
+                  >
+                    <View className="flex-row items-center">
+                      <View className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg mr-4 items-center justify-center">
+                        {item.photo?.thumb ? (
+                          <Text className="text-2xl">🍽️</Text>
+                        ) : (
+                          <FontAwesome name="cutlery" size={20} color={theme === 'dark' ? '#9CA3AF' : '#6B7280'} />
+                        )}
                       </View>
+                      <View className="flex-1">
+                        <Text className="text-lg font-semibold text-text-primary dark:text-dark-text-primary">
+                          {item.food_name}
+                        </Text>
+                        {item.brand_name && (
+                          <Text className="text-text-secondary dark:text-dark-text-secondary mb-2">
+                            {item.brand_name}
+                          </Text>
+                        )}
+                        <View className="flex-row">
+                          <Text className="text-sm text-text-secondary dark:text-dark-text-secondary mr-4">
+                            {Math.round(item.nf_calories)} cal
+                          </Text>
+                          <Text className="text-sm text-text-secondary dark:text-dark-text-secondary mr-4">
+                            {item.serving_qty} {item.serving_unit}
+                          </Text>
+                        </View>
+                      </View>
+                      <TouchableOpacity className="bg-primary dark:bg-dark-primary p-2 rounded-full">
+                        <FontAwesome name="plus" size={16} color="#fff" />
+                      </TouchableOpacity>
                     </View>
-                    <TouchableOpacity className="bg-primary dark:bg-dark-primary p-2 rounded-full">
-                      <FontAwesome name="plus" size={16} color="#fff" />
-                    </TouchableOpacity>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : (
+              <View className="flex-1 items-center justify-center">
+                <FontAwesome name="search" size={48} color={theme === 'dark' ? '#6B7280' : '#9CA3AF'} />
+                <Text className="text-text-secondary dark:text-dark-text-secondary mt-4 text-center">
+                  {searchQuery ? 'No results found. Try a different search term.' : 'Search for food items to see nutrition information'}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 

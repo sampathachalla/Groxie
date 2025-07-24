@@ -1,13 +1,36 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import BottomNavbar from '../../components/Navbar/BottomNavbar';
 import TopNavbar from '../../components/Navbar/TopNavbar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
   const { theme } = useTheme();
+  const { logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Logout', 
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/auth/login');
+          }
+        }
+      ]
+    );
+  };
+
   if (!theme || (theme !== 'light' && theme !== 'dark')) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -40,9 +63,18 @@ export default function ProfileScreen() {
             <Text className="text-lg font-semibold text-primary dark:text-dark-primary mb-2">
               Profile Info
             </Text>
-            <Text className="text-base text-text-secondary dark:text-dark-text-secondary">
+            <Text className="text-base text-text-secondary dark:text-dark-text-secondary mb-4">
               This is your profile screen. Current theme: {theme}
             </Text>
+            
+            {/* Logout Button */}
+            <TouchableOpacity
+              onPress={handleLogout}
+              className="bg-red-500 dark:bg-red-600 p-3 rounded-lg flex-row items-center justify-center mt-4"
+            >
+              <FontAwesome name="sign-out" size={16} color="#fff" />
+              <Text className="text-white font-semibold ml-2">Logout</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>

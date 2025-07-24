@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, ActivityIndicator } from 'react-native';
 import { ThemeProvider, useTheme } from '../context/ThemeContext';
+import { AuthProvider } from '../context/AuthContext';
 
 // Load Tailwind styles only on web (for NativeWind)
 if (typeof window !== 'undefined') {
@@ -54,8 +55,10 @@ function ThemedLayoutWrapper() {
 // ✅ Final Export
 export default function Layout() {
   return (
-    <ThemeProvider>
-      <ThemedLayoutWrapper />
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <ThemedLayoutWrapper />
+      </ThemeProvider>
+    </AuthProvider>
   );
 }

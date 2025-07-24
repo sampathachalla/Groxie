@@ -1,5 +1,5 @@
 // context/ThemeContext.tsx
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Appearance, View, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from 'nativewind';
@@ -16,7 +16,7 @@ const ThemeContext = createContext<ThemeContextType>({
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [isLoading, setIsLoading] = useState(true); // <-- Add loading state
+  const [isLoading, setIsLoading] = useState(true);
   const { setColorScheme } = useColorScheme();
 
   useEffect(() => {
@@ -38,18 +38,20 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         setTheme(systemTheme);
         setColorScheme(systemTheme);
       }
-      setIsLoading(false); // <-- Set loading to false after theme is set
+      setIsLoading(false);
     })();
-  }, [setColorScheme]);
+  }, []); // Remove setColorScheme from dependencies
 
-  const toggleTheme = async () => {
+  const toggleTheme = useCallback(async () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
-    setColorScheme(newTheme); // This is crucial for NativeWind
+    setColorScheme(newTheme);
     try {
       await AsyncStorage.setItem('theme', newTheme);
-    } catch (error) {}
-  };
+    } catch (error) {
+      console.error('Failed to save theme:', error);
+    }
+  }, [theme, setColorScheme]);
 
   if (isLoading) {
     // Render a loading indicator while theme is being loaded

@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import BottomNavbar from '../../components/Navbar/BottomNavbar';
 import TopNavbar from '../../components/Navbar/TopNavbar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,21 +6,95 @@ import { useTheme } from '../../context/ThemeContext';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useState, useEffect } from 'react';
+import { nutritionixAPI, NutritionData } from '../../services/nutritionixApi';
 
 export default function ScannerResultScreen() {
   const { theme } = useTheme();
-  const params = useLocalSearchParams();
+  const { data, type, foodName, brand, nixItemId } = useLocalSearchParams();
   const [scannedData, setScannedData] = useState<{data: string, type: string} | null>(null);
+  const [nutritionData, setNutritionData] = useState<NutritionData | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Get the scanned data from route params
-    if (params.data && params.type) {
+    // Handle barcode scan data
+    if (
+      data &&
+      type &&
+      (scannedData?.data !== data || scannedData?.type !== type)
+    ) {
       setScannedData({
-        data: params.data as string,
-        type: params.type as string
+        data: data as string,
+        type: type as string
       });
+      
+      // Fetch nutrition data for barcode
+      fetchNutritionByBarcode(data as string);
     }
-  }, [params]);
+    
+    // Handle food name search data
+    if (foodName && !data) {
+      if (nixItemId) {
+        fetchBrandedNutrition(nixItemId as string);
+      } else {
+        fetchNutritionByName(foodName as string);
+      }
+    }
+  }, [data, type, scannedData, foodName, nixItemId]);
+
+  const fetchNutritionByBarcode = async (barcode: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const nutrition = await nutritionixAPI.getNutritionByBarcode(barcode);
+      if (nutrition) {
+        setNutritionData(nutrition);
+      } else {
+        setError('Product not found in nutrition database');
+      }
+    } catch (err) {
+      setError('Failed to fetch nutrition information');
+      console.error('Error fetching nutrition by barcode:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchNutritionByName = async (name: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const nutritions = await nutritionixAPI.getNutritionByName(name);
+      if (nutritions && nutritions.length > 0) {
+        setNutritionData(nutritions[0]);
+      } else {
+        setError('Nutrition information not found');
+      }
+    } catch (err) {
+      setError('Failed to fetch nutrition information');
+      console.error('Error fetching nutrition by name:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchBrandedNutrition = async (itemId: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const nutrition = await nutritionixAPI.getBrandedNutrition(itemId);
+      if (nutrition) {
+        setNutritionData(nutrition);
+      } else {
+        setError('Product nutrition information not found');
+      }
+    } catch (err) {
+      setError('Failed to fetch nutrition information');
+      console.error('Error fetching branded nutrition:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleScanAgain = () => {
     router.push('/(tabs)/search');
@@ -35,11 +109,15 @@ export default function ScannerResultScreen() {
   };
 
   const handleLookupProduct = () => {
-    Alert.alert(
-      'Product Lookup',
-      `Looking up product information for barcode: ${scannedData?.data}`,
-      [{ text: 'OK' }]
-    );
+    if (scannedData?.data) {
+      fetchNutritionByBarcode(scannedData.data);
+    } else {
+      Alert.alert(
+        'No Barcode Data',
+        'No barcode data available to lookup product information.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   const formatBarcodeType = (type: string) => {
@@ -153,10 +231,132 @@ export default function ScannerResultScreen() {
                 </Text>
               </View>
               <Text className="text-yellow-600 dark:text-yellow-500 text-sm">
-                For now, we're displaying the scanned barcode ID. Future updates will include product lookup and nutritional information.
+                {isLoading ? 'Fetching nutrition information...' : 
+                 nutritionData ? 'Nutrition information loaded successfully!' :
+                 error ? error : 'Tap "Lookup Product Information" to get nutrition details.'}
               </Text>
             </View>
           </View>
+
+          {/* Nutrition Information Card */}
+          {nutritionData && (
+            <View className="bg-card dark:bg-dark-card rounded-xl p-6 mb-6 border border-gray-200 dark:border-gray-600">
+              <View className="flex-row items-center mb-4">
+                <FontAwesome name="leaf" size={24} color={theme === 'dark' ? '#00C853' : '#43A047'} />
+                <Text className="text-lg font-bold text-primary dark:text-dark-primary ml-3">
+                  Nutrition Information
+                </Text>
+              </View>
+
+              {/* Food Name */}
+              <View className="mb-4">
+                <Text className="text-2xl font-bold text-text-primary dark:text-dark-text-primary mb-1">
+                  {nutritionData.food_name}
+                </Text>
+                {nutritionData.brand_name && (
+                  <Text className="text-lg text-text-secondary dark:text-dark-text-secondary">
+                    by {nutritionData.brand_name}
+                  </Text>
+                )}
+              </View>
+
+              {/* Serving Information */}
+              <View className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg mb-4">
+                <Text className="text-blue-700 dark:text-blue-400 font-semibold mb-1">
+                  Serving Size
+                </Text>
+                <Text className="text-blue-600 dark:text-blue-300">
+                  {nutritionData.serving_qty} {nutritionData.serving_unit}
+                  {nutritionData.serving_weight_grams && ` (${nutritionData.serving_weight_grams}g)`}
+                </Text>
+              </View>
+
+              {/* Main Nutrition Facts */}
+              <View className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg mb-4">
+                <Text className="text-lg font-bold text-text-primary dark:text-dark-text-primary mb-3">
+                  Nutrition Facts
+                </Text>
+                
+                <View className="space-y-2">
+                  <View className="flex-row justify-between items-center border-b border-gray-200 dark:border-gray-600 pb-2">
+                    <Text className="text-lg font-semibold text-text-primary dark:text-dark-text-primary">Calories</Text>
+                    <Text className="text-lg font-bold text-text-primary dark:text-dark-text-primary">
+                      {Math.round(nutritionData.nf_calories)}
+                    </Text>
+                  </View>
+                  
+                  <View className="flex-row justify-between items-center py-1">
+                    <Text className="text-text-secondary dark:text-dark-text-secondary">Total Fat</Text>
+                    <Text className="text-text-primary dark:text-dark-text-primary font-medium">
+                      {nutritionData.nf_total_fat?.toFixed(1) || '0'}g
+                    </Text>
+                  </View>
+                  
+                  {nutritionData.nf_saturated_fat && (
+                    <View className="flex-row justify-between items-center py-1 ml-4">
+                      <Text className="text-text-secondary dark:text-dark-text-secondary">Saturated Fat</Text>
+                      <Text className="text-text-primary dark:text-dark-text-primary">
+                        {nutritionData.nf_saturated_fat.toFixed(1)}g
+                      </Text>
+                    </View>
+                  )}
+                  
+                  <View className="flex-row justify-between items-center py-1">
+                    <Text className="text-text-secondary dark:text-dark-text-secondary">Total Carbohydrates</Text>
+                    <Text className="text-text-primary dark:text-dark-text-primary font-medium">
+                      {nutritionData.nf_total_carbohydrate?.toFixed(1) || '0'}g
+                    </Text>
+                  </View>
+                  
+                  {nutritionData.nf_dietary_fiber && (
+                    <View className="flex-row justify-between items-center py-1 ml-4">
+                      <Text className="text-text-secondary dark:text-dark-text-secondary">Dietary Fiber</Text>
+                      <Text className="text-text-primary dark:text-dark-text-primary">
+                        {nutritionData.nf_dietary_fiber.toFixed(1)}g
+                      </Text>
+                    </View>
+                  )}
+                  
+                  {nutritionData.nf_sugars && (
+                    <View className="flex-row justify-between items-center py-1 ml-4">
+                      <Text className="text-text-secondary dark:text-dark-text-secondary">Sugars</Text>
+                      <Text className="text-text-primary dark:text-dark-text-primary">
+                        {nutritionData.nf_sugars.toFixed(1)}g
+                      </Text>
+                    </View>
+                  )}
+                  
+                  <View className="flex-row justify-between items-center py-1">
+                    <Text className="text-text-secondary dark:text-dark-text-secondary">Protein</Text>
+                    <Text className="text-text-primary dark:text-dark-text-primary font-medium">
+                      {nutritionData.nf_protein?.toFixed(1) || '0'}g
+                    </Text>
+                  </View>
+                  
+                  {nutritionData.nf_sodium && (
+                    <View className="flex-row justify-between items-center py-1">
+                      <Text className="text-text-secondary dark:text-dark-text-secondary">Sodium</Text>
+                      <Text className="text-text-primary dark:text-dark-text-primary">
+                        {nutritionData.nf_sodium.toFixed(0)}mg
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Loading State */}
+          {isLoading && (
+            <View className="bg-card dark:bg-dark-card rounded-xl p-6 mb-6 border border-gray-200 dark:border-gray-600">
+              <View className="flex-row items-center justify-center">
+                <ActivityIndicator size="large" color={theme === 'dark' ? '#00C853' : '#43A047'} />
+                <Text className="text-text-primary dark:text-dark-text-primary ml-3 text-lg">
+                  Loading nutrition information...
+                </Text>
+              </View>
+            </View>
+          )}
 
           {/* Action Buttons */}
           <View className="space-y-3 mb-6">

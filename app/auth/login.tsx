@@ -9,23 +9,39 @@ import {
   ScrollView,
   SafeAreaView,
   useColorScheme,
+  Alert,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
+import { useAuth } from '../../context/AuthContext';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const colorScheme = useColorScheme();
+  const { login } = useAuth();
 
-  const handleLogin = () => {
-    // Dummy login logic for demo
-    if ((email === 'sampath' || email === 'sampath@gmail.com') && password === 'sam2001') {
-      router.replace('/(tabs)/home');
-    } else {
-      alert('Invalid credentials. Try sampath / sam2001');
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const success = await login(email, password);
+      if (success) {
+        router.replace('/(tabs)/home');
+      } else {
+        Alert.alert('Login Failed', 'Invalid credentials. Try sampath / sam2001');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -78,10 +94,13 @@ export default function LoginScreen() {
                 </TouchableOpacity>
               </View>
               <TouchableOpacity
-                className="bg-button dark:bg-dark-button py-4 rounded-xl mb-2"
+                className={`bg-button dark:bg-dark-button py-4 rounded-xl mb-2 ${isLoading ? 'opacity-50' : ''}`}
                 onPress={handleLogin}
+                disabled={isLoading}
               >
-                <Text className="text-white text-center font-bold text-lg">Log In</Text>
+                <Text className="text-white text-center font-bold text-lg">
+                  {isLoading ? 'Logging In...' : 'Log In'}
+                </Text>
               </TouchableOpacity>
             </View>
 
